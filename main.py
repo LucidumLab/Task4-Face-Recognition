@@ -47,6 +47,20 @@ def main():
     combined = np.vstack([X_test[:10], recon])
     titles = ["Original"] * 10 + ["Reconstructed"] * 10
     plot_gallery(combined, image_shape, titles=titles, n_row=2, n_col=10)
+    
+    test_face = X_test[0]
+    predicted_face, predicted_label = recognizer.predict(test_face)
 
-if __name__ == "__main__":
+    print(f"Predicted label: {predicted_label}")
+
+    # Optional: plot input and matched face
+    plt.subplot(1, 2, 1)
+    plot_image(test_face, image_shape, title="Input")
+    plt.subplot(1, 2, 2)
+    plot_image(predicted_face, image_shape, title=f"Match: {predicted_label}")
+    plt.show()
+
+
+if __name__ == "__main__":  
     main()
+    

@@ -65,3 +65,5 @@ class PCAEigenfaces:
 
     def get_mean_face(self):
         return self.mean_face
+    
+    

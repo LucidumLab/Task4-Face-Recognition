@@ -6,34 +6,56 @@ class FaceRecognizer:
         self.pca = PCAEigenfaces(num_components=num_components)
         self.X_train_proj = None
         self.y_train = None
+        self.train_projections = None
+        self.train_labels = None
+        self.train_data = None
 
     def train(self, X_train, y_train):
+        """Train the face recognizer"""
         self.y_train = y_train
+        self.train_data = X_train
         self.pca.fit(X_train)
         self.X_train_proj = self.pca.transform(X_train)
+        self.train_projections = self.X_train_proj
+        self.train_labels = y_train
 
-    def predict(self, X):
+    def predict(self, face_vector):
         """
-        Predict labels for a batch of input samples.
-        X: shape (n_samples, n_features)
-        Returns: np.array of predicted labels
+        Predict the identity of a given face image by comparing it to training faces in PCA space.
+
+        Parameters:
+            face_vector (ndarray): Flattened input face image.
+
+        Returns:
+            best_match_face (ndarray): The most similar training face (original pixel space).
+            best_label (str): Label (ID or name) of the matched face.
         """
-        X_proj = self.pca.transform(X)
-        predictions = []
+        if self.X_train_proj is None or self.y_train is None:
+            raise ValueError("Model has not been trained yet.")
 
-        for x in X_proj:
-            distances = np.linalg.norm(self.X_train_proj - x, axis=1)
-            nearest_idx = np.argmin(distances)
-            predictions.append(self.y_train[nearest_idx])
+        # Project input face into PCA space
+        face_projected = self.pca.transform(face_vector.reshape(1, -1))[0]
 
-        return np.array(predictions)
+        # Compute distances to all training projections
+        distances = np.linalg.norm(self.train_projections - face_projected, axis=1)
+        min_index = np.argmin(distances)
+
+        # Get the best match
+        best_label = self.train_labels[min_index]
+        best_match_face = self.train_data[min_index]
+
+        return best_match_face, best_label
 
     def evaluate(self, X_test, y_test):
         """
         Returns accuracy over test set.
         """
-        y_pred = self.predict(X_test)
-        accuracy = np.mean(y_pred == y_test)
+        y_pred = []
+        for i in range(len(X_test)):
+            _, pred_label = self.predict(X_test[i])
+            y_pred.append(pred_label)
+        
+        accuracy = np.mean(np.array(y_pred) == y_test)
         return accuracy
 
     def reconstruct(self, X):
