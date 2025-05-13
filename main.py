@@ -342,48 +342,61 @@ class FaceRecognitionApp(QMainWindow):
             self.test_combo.addItem("Select test image...")
             for i in range(len(self.X_test)):
                 self.test_combo.addItem(f"Test image {i+1} (Label: {self.y_test[i]})")            
-    
+        
     def train_model(self):
         if self.dataset is None:
+            # Show a warning message if no dataset is loaded
+            self.dataset_status_label.setText("Please load a dataset first!")
+            self.dataset_status_label.setStyleSheet(f"color: {WARNING}; font-weight: bold;")
             return
-            
+        
+        # Update status to show training is in progress
+        self.dataset_status_label.setText("Training model... Please wait.")
+        self.dataset_status_label.setStyleSheet(f"color: {INFO}; font-weight: bold;")
+        
+        # Force UI update
+        QApplication.processEvents()
+        
+        # Get number of components from spinner
         num_components = self.components_spin.value()
         
+        # Train the model
         self.recognizer = FaceRecognizer(num_components=num_components)
         self.recognizer.train(self.X_train, self.y_train)
         
+        # Evaluate and get accuracy
         accuracy = self.recognizer.evaluate(self.X_test, self.y_test)
         
+        # Update status with accuracy information
+        accuracy_pct = accuracy * 100
+        self.dataset_status_label.setText(f"Model trained! Accuracy: {accuracy_pct:.2f}%")
+        self.dataset_status_label.setStyleSheet(f"color: {SUCCESS}; font-weight: bold;")
         
+        # Display mean face
         mean_face = self.recognizer.get_mean_face()
         self.mean_display.set_image(mean_face, self.image_shape)
         self.mean_display.set_title("Mean Face")
         
-        
+        # Display eigenfaces
         eigenfaces = self.recognizer.get_eigenfaces().T  
         titles = [f"Eigenface {i+1}" for i in range(min(10, num_components))]
         
-        
+        # Normalize eigenfaces for better visualization
         normalized_eigenfaces = []
         for ef in eigenfaces[:10]:
-            
             norm_ef = (ef - ef.min()) / (ef.max() - ef.min() + 1e-8)
             normalized_eigenfaces.append(norm_ef)
         
         self.eigen_gallery.display_images(normalized_eigenfaces, self.image_shape, titles=titles)
         
-        
+        # Display reconstructions
         max_display_faces = 5
         test_faces = self.X_test[:min(10, len(self.X_test))]
         recon_faces = self.recognizer.reconstruct(test_faces)
         
-        
-        
         for i in range(len(recon_faces)):
-            
             if recon_faces[i].min() < 0 or recon_faces[i].max() > 1.0:
                 recon_faces[i] = np.clip(recon_faces[i], 0, 1.0)
-        
         
         combined = []
         titles = []
@@ -393,7 +406,6 @@ class FaceRecognitionApp(QMainWindow):
             combined.append(recon_faces[i])  
             titles.append("Original")
             titles.append("Reconstructed")
-        
         
         self.recon_gallery.display_images(combined, self.image_shape, titles=titles)
 
