@@ -2,6 +2,7 @@ import os
 import cv2
 import numpy as np
 from PIL import Image  # Fallback for GIF reading
+from .face_extractor import FaceExtractor
 
 class FaceDataset:
     def __init__(self, base_dir="..\\data\\yalefaces", image_size=(64, 64)):
@@ -70,6 +71,72 @@ class FaceDataset:
             labels.append(label)
 
         return np.array(images), np.array(labels)
+    
+    # def _load_images(self, folder_path):
+    #     """Load and preprocess images from directory"""
+    #     images = []
+    #     labels = []
+    #     current_label = 0
+        
+    #     # Create face extractor for advanced preprocessing
+    #     face_extractor = FaceExtractor()
+
+    #     try:
+    #         file_list = sorted(os.listdir(folder_path))
+    #     except FileNotFoundError:
+    #         print(f"Warning: Directory {folder_path} not found")
+    #         return np.array([]), np.array([])
+
+    #     for fname in file_list:
+    #         if not fname.lower().endswith(('.gif', '.png', '.jpg', '.jpeg')):
+    #             continue
+
+    #         # Extract label from filename
+    #         subject_name = fname.split(".")[0]
+
+    #         if subject_name not in self.label_map:
+    #             self.label_map[subject_name] = current_label
+    #             current_label += 1
+
+    #         label = self.label_map[subject_name]
+    #         img_path = os.path.join(folder_path, fname)
+
+    #         # Try multiple methods to load image
+    #         img = self._load_image_file(img_path)
+    #         if img is None:
+    #             continue
+
+    #         # Use extract_face method which handles both face detection and preprocessing
+    #         # This will automatically:
+    #         # 1. Detect the face region using skin detection and connected components
+    #         # 2. Extract only the face portion of the image
+    #         # 3. Resize to our target size
+    #         # 4. Apply preprocessing (histogram equalization, smoothing, normalization)
+    #         processed_face = face_extractor.extract_face(
+    #             img, 
+    #             target_size=self.image_size,
+    #             preprocess=True
+    #         )
+            
+    #         # If face extraction fails, try simple preprocessing instead
+    #         if processed_face is None:
+    #             # Resize the image to our target size
+    #             img_resized = cv2.resize(img, self.image_size)
+                
+    #             # Try just preprocessing without face detection
+    #             processed_face = face_extractor.preprocess_face(img_resized)
+                
+    #             # If preprocessing fails too, fall back to basic normalization
+    #             if processed_face is None:
+    #                 processed_face = img_resized.astype(np.float32) / 255.0
+                
+    #         # Flatten the image for the dataset
+    #         img_flattened = processed_face.flatten()
+            
+    #         images.append(img_flattened)
+    #         labels.append(label)
+
+    #     return np.array(images), np.array(labels)
 
     def _load_image_file(self, img_path):
         """Try multiple methods to load an image file"""

@@ -213,145 +213,145 @@ class FaceExtractor:
         
         return face_img
 
-def test_face_extractor():
-    extractor = FaceExtractor()
+# def test_face_extractor():
+#     extractor = FaceExtractor()
     
-    # Define test directories
-    test_dirs = [
-        "data/yalefaces",  
-        "data/test_images",  
-        "data"  
-    ]
+#     # Define test directories
+#     test_dirs = [
+#         "data/yalefaces",  
+#         "data/test_images",  
+#         "data"  
+#     ]
     
-    # Find a valid directory with images
-    test_dir = None
-    for directory in test_dirs:
-        if os.path.exists(directory):
-            test_dir = directory
-            break
+#     # Find a valid directory with images
+#     test_dir = None
+#     for directory in test_dirs:
+#         if os.path.exists(directory):
+#             test_dir = directory
+#             break
     
-    if test_dir is None:
-        print("No test directory found. Please provide a valid directory with images.")
-        return
+#     if test_dir is None:
+#         print("No test directory found. Please provide a valid directory with images.")
+#         return
     
-    # Get a list of image files
-    image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', '.tiff']
-    image_files = []
+#     # Get a list of image files
+#     image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', '.tiff']
+#     image_files = []
     
-    for root, _, files in os.walk(test_dir):
-        for file in files:
-            if any(file.lower().endswith(ext) for ext in image_extensions):
-                image_files.append(os.path.join(root, file))
-                if len(image_files) >= 10:  # Limit to 10 files to avoid processing too many
-                    break
-        if len(image_files) >= 10:
-            break
+#     for root, _, files in os.walk(test_dir):
+#         for file in files:
+#             if any(file.lower().endswith(ext) for ext in image_extensions):
+#                 image_files.append(os.path.join(root, file))
+#                 if len(image_files) >= 10:  # Limit to 10 files to avoid processing too many
+#                     break
+#         if len(image_files) >= 10:
+#             break
     
-    if not image_files:
-        print(f"No image files found in {test_dir}")
-        return
+#     if not image_files:
+#         print(f"No image files found in {test_dir}")
+#         return
     
-    # Limit to first 5 images for testing
-    test_images = image_files[:5]
+#     # Limit to first 5 images for testing
+#     test_images = image_files[:5]
     
-    # Create a figure to display results
-    fig, axes = plt.subplots(len(test_images), 4, figsize=(20, 4 * len(test_images)))
+#     # Create a figure to display results
+#     fig, axes = plt.subplots(len(test_images), 4, figsize=(20, 4 * len(test_images)))
     
-    if len(test_images) == 1:
-        axes = [axes]  
+#     if len(test_images) == 1:
+#         axes = [axes]  
     
-    for i, img_path in enumerate(test_images):
-        try:
-            print(f"Processing {img_path}...")
+#     for i, img_path in enumerate(test_images):
+#         try:
+#             print(f"Processing {img_path}...")
             
-            # Load original image
-            original_img = np.array(Image.open(img_path))
+#             # Load original image
+#             original_img = np.array(Image.open(img_path))
             
-            # Convert to RGB if it has an alpha channel or is grayscale
-            if len(original_img.shape) == 2:
-                original_img = np.stack([original_img, original_img, original_img], axis=2)
-            elif original_img.shape[-1] == 4:
-                original_img = original_img[:, :, :3]
+#             # Convert to RGB if it has an alpha channel or is grayscale
+#             if len(original_img.shape) == 2:
+#                 original_img = np.stack([original_img, original_img, original_img], axis=2)
+#             elif original_img.shape[-1] == 4:
+#                 original_img = original_img[:, :, :3]
                 
-            # Extract face without preprocessing
-            face_img = extractor.extract_face(original_img, preprocess=False)
+#             # Extract face without preprocessing
+#             face_img = extractor.extract_face(original_img, preprocess=False)
             
-            # Extract face with preprocessing
-            preprocessed_face = extractor.extract_face(original_img, preprocess=True)
+#             # Extract face with preprocessing
+#             preprocessed_face = extractor.extract_face(original_img, preprocess=True)
             
-            # Get skin mask for visualization
-            skin_mask = extractor.detect_skin(original_img)
+#             # Get skin mask for visualization
+#             skin_mask = extractor.detect_skin(original_img)
             
-            # Display original image
-            axes[i][0].imshow(original_img)
-            axes[i][0].set_title(f"Original: {os.path.basename(img_path)}")
-            axes[i][0].axis('off')
+#             # Display original image
+#             axes[i][0].imshow(original_img)
+#             axes[i][0].set_title(f"Original: {os.path.basename(img_path)}")
+#             axes[i][0].axis('off')
             
-            # Display skin mask
-            axes[i][1].imshow(skin_mask, cmap='gray')
-            axes[i][1].set_title("Skin Detection Mask")
-            axes[i][1].axis('off')
+#             # Display skin mask
+#             axes[i][1].imshow(skin_mask, cmap='gray')
+#             axes[i][1].set_title("Skin Detection Mask")
+#             axes[i][1].axis('off')
             
-            # Display extracted face without preprocessing
-            if face_img is not None:
-                # Convert to display format if normalized
-                if face_img.dtype == np.float64 or face_img.dtype == np.float32:
-                    display_img = (face_img * 255).astype(np.uint8)
-                else:
-                    display_img = face_img
+#             # Display extracted face without preprocessing
+#             if face_img is not None:
+#                 # Convert to display format if normalized
+#                 if face_img.dtype == np.float64 or face_img.dtype == np.float32:
+#                     display_img = (face_img * 255).astype(np.uint8)
+#                 else:
+#                     display_img = face_img
                     
-                axes[i][2].imshow(display_img, cmap='gray' if len(face_img.shape) == 2 else None)
-                axes[i][2].set_title("Extracted Face")
-            else:
-                axes[i][2].text(0.5, 0.5, "No face detected", 
-                               horizontalalignment='center',
-                               verticalalignment='center',
-                               transform=axes[i][2].transAxes)
-            axes[i][2].axis('off')
+#                 axes[i][2].imshow(display_img, cmap='gray' if len(face_img.shape) == 2 else None)
+#                 axes[i][2].set_title("Extracted Face")
+#             else:
+#                 axes[i][2].text(0.5, 0.5, "No face detected", 
+#                                horizontalalignment='center',
+#                                verticalalignment='center',
+#                                transform=axes[i][2].transAxes)
+#             axes[i][2].axis('off')
             
-            # Display preprocessed face
-            if preprocessed_face is not None:
-                # Convert to display format if normalized
-                if preprocessed_face.dtype == np.float64 or preprocessed_face.dtype == np.float32:
-                    display_img = (preprocessed_face * 255).astype(np.uint8)
-                else:
-                    display_img = preprocessed_face
+#             # Display preprocessed face
+#             if preprocessed_face is not None:
+#                 # Convert to display format if normalized
+#                 if preprocessed_face.dtype == np.float64 or preprocessed_face.dtype == np.float32:
+#                     display_img = (preprocessed_face * 255).astype(np.uint8)
+#                 else:
+#                     display_img = preprocessed_face
                     
-                axes[i][3].imshow(display_img, cmap='gray')
-                axes[i][3].set_title("Preprocessed Face")
-            else:
-                axes[i][3].text(0.5, 0.5, "No face detected", 
-                               horizontalalignment='center',
-                               verticalalignment='center',
-                               transform=axes[i][3].transAxes)
-            axes[i][3].axis('off')
+#                 axes[i][3].imshow(display_img, cmap='gray')
+#                 axes[i][3].set_title("Preprocessed Face")
+#             else:
+#                 axes[i][3].text(0.5, 0.5, "No face detected", 
+#                                horizontalalignment='center',
+#                                verticalalignment='center',
+#                                transform=axes[i][3].transAxes)
+#             axes[i][3].axis('off')
             
-            print(f"Successfully processed {img_path}")
+#             print(f"Successfully processed {img_path}")
             
-        except Exception as e:
-            print(f"Error processing {img_path}: {str(e)}")
-            axes[i][0].text(0.5, 0.5, f"Error: {str(e)}", 
-                           horizontalalignment='center',
-                           verticalalignment='center',
-                           transform=axes[i][0].transAxes)
-            axes[i][0].axis('off')
-            axes[i][1].axis('off')
-            axes[i][2].axis('off')
-            axes[i][3].axis('off')
+#         except Exception as e:
+#             print(f"Error processing {img_path}: {str(e)}")
+#             axes[i][0].text(0.5, 0.5, f"Error: {str(e)}", 
+#                            horizontalalignment='center',
+#                            verticalalignment='center',
+#                            transform=axes[i][0].transAxes)
+#             axes[i][0].axis('off')
+#             axes[i][1].axis('off')
+#             axes[i][2].axis('off')
+#             axes[i][3].axis('off')
     
-    plt.tight_layout()
+#     plt.tight_layout()
     
-    # Save the figure
-    output_dir = "results"
-    os.makedirs(output_dir, exist_ok=True)
-    output_path = os.path.join(output_dir, "face_extraction_results.png")
-    plt.savefig(output_path)
-    print(f"Results saved to {output_path}")
+#     # Save the figure
+#     output_dir = "results"
+#     os.makedirs(output_dir, exist_ok=True)
+#     output_path = os.path.join(output_dir, "face_extraction_results.png")
+#     plt.savefig(output_path)
+#     print(f"Results saved to {output_path}")
     
-    # Show the figure
-    plt.show()
+#     # Show the figure
+#     plt.show()
     
 
-# Run the test if this file is executed directly
-if __name__ == "__main__":
-    test_face_extractor()
+# # Run the test if this file is executed directly
+# if __name__ == "__main__":
+#     test_face_extractor()
