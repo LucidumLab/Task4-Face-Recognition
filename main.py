@@ -8,6 +8,11 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QH
 from PyQt5.QtGui import QPixmap, QImage, QFont, QPalette, QColor
 from PyQt5.QtCore import Qt
 
+from PyQt5.QtWidgets import QLabel, QGroupBox, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QSizePolicy
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+from PyQt5.QtWidgets import QDoubleSpinBox
+
 from src.dataset import FaceDataset
 from src.recognizer import FaceRecognizer
 
@@ -222,13 +227,25 @@ class FaceRecognitionApp(QMainWindow):
         self.components_spin.setPrefix("Components: ")
         self.components_spin.setMinimumHeight(36)
         
+        # Add threshold input
+        self.threshold_spin = QDoubleSpinBox()
+        self.threshold_spin.setRange(0, 1.0)
+        self.threshold_spin.setSingleStep(0.1)
+        self.threshold_spin.setDecimals(2)
+        self.threshold_spin.setValue(0.98)
+        self.threshold_spin.setPrefix("Threshold: ")
+        self.threshold_spin.setMinimumHeight(36)
+
         train_btn = QPushButton("Train Model")
         train_btn.setMinimumHeight(36)
         train_btn.setCursor(Qt.PointingHandCursor)
         train_btn.clicked.connect(self.train_model)
         
         train_layout.addWidget(self.components_spin)
+        train_layout.addWidget(self.threshold_spin)
+
         train_layout.addWidget(train_btn)
+
         
         
         test_group = QGroupBox("Testing")
@@ -320,7 +337,101 @@ class FaceRecognitionApp(QMainWindow):
         
         
         main_layout.addWidget(control_panel, 1)
-        main_layout.addWidget(self.tabs, 8)
+        main_layout.addWidget(self.tabs, 8)        
+        
+        eval_tab = QWidget()
+        eval_layout = QVBoxLayout(eval_tab)
+        eval_layout.setContentsMargins(15, 15, 15, 15)
+        eval_layout.setSpacing(15)
+
+        # Metrics section
+        metrics_group = QGroupBox("Evaluation Metrics")
+        metrics_layout = QVBoxLayout(metrics_group)
+        self.metrics_label = QLabel("Accuracy: N/A")
+        self.metrics_label.setFont(QFont("Segoe UI", 10))
+        self.metrics_label.setAlignment(Qt.AlignLeft)
+        metrics_layout.addWidget(self.metrics_label)
+        # Create a horizontal layout to place the confusion matrix and ROC curve next to each other
+        eval_h_layout = QHBoxLayout()  # Horizontal layout for side-by-side arrangement
+
+        # Confusion Matrix Table
+        matrix_group = QGroupBox("Confusion Matrix")
+        matrix_layout = QVBoxLayout(matrix_group)
+        self.confusion_table = QTableWidget()
+        self.confusion_table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        matrix_layout.addWidget(self.confusion_table)
+
+        # ROC Curve Canvas
+        roc_group = QGroupBox("ROC Curve")
+        roc_layout = QVBoxLayout(roc_group)
+        self.roc_canvas = FigureCanvas(Figure(figsize=(5, 3)))
+        self.roc_ax = self.roc_canvas.figure.add_subplot(111)
+        roc_layout.addWidget(self.roc_canvas)
+
+        # Add confusion matrix and ROC curve to the horizontal layout
+        eval_h_layout.addWidget(matrix_group, 1)
+        eval_h_layout.addWidget(roc_group, 2)
+
+        # Add all sections to main layout
+        eval_layout.addWidget(metrics_group)
+        eval_layout.addLayout(eval_h_layout)  # Add the horizontal layout here
+
+        self.tabs.addTab(eval_tab, "Evaluation")
+
+        
+
+
+
+    def update_eval_metrics(self):
+        # Evaluate using recognizer
+        threshold = self.threshold_spin.value()
+
+        metrics = self.recognizer.evaluate(self.X_test, self.y_test, threshold= threshold)
+
+        # Display accuracy and rejection rate
+        accuracy = metrics['accuracy']
+        rejection_rate = metrics['rejection_rate']
+        self.metrics_label.setText(f"Accuracy: {accuracy * 100:.2f}%")
+
+        # Update confusion matrix in table
+        confusion = metrics['confusion_matrix']
+        num_rows, num_cols = confusion.shape
+        self.confusion_table.setRowCount(num_rows)
+        self.confusion_table.setColumnCount(num_cols)
+
+        # Set headers
+        self.confusion_table.setHorizontalHeaderLabels([f"Predicted {i}" for i in range(num_cols)])
+        self.confusion_table.setVerticalHeaderLabels([f"True {i}" for i in range(num_rows)])
+
+        # Fill the table
+        for i in range(num_rows):
+            for j in range(num_cols):
+                item = QTableWidgetItem(str(confusion[i, j]))
+                self.confusion_table.setItem(i, j, item)
+
+        # Plot ROC curves
+        self.roc_ax.clear()
+        roc_data = metrics['roc_curve']
+        fpr = metrics['fpr']
+        tpr = metrics['tpr']
+
+        for class_idx, auc_value in roc_data.items():
+            self.roc_ax.plot(fpr[class_idx], tpr[class_idx], lw=2, label=f'Class {class_idx} (AUC = {auc_value:.2f})')
+
+        self.roc_ax.plot([0, 1], [0, 1], linestyle='--', color='gray')
+        self.roc_ax.set_title("Receiver Operating Characteristic (ROC) Curve")
+        self.roc_ax.set_xlabel("False Positive Rate")
+        self.roc_ax.set_ylabel("True Positive Rate")
+        self.roc_ax.legend(loc="lower right")
+        self.roc_canvas.draw()
+        # Optional debugging output
+        print(f"Accuracy: {accuracy * 100:.2f}%")
+        print(f"Rejection Rate: {rejection_rate * 100:.2f}%")
+        print("Confusion Matrix:")
+        print(confusion)
+        print("ROC Curve AUCs:")
+        print(roc_data)
+
         
     def load_dataset(self):
         dir_name = QFileDialog.getExistingDirectory(self, "Select Dataset Directory")
@@ -352,8 +463,8 @@ class FaceRecognitionApp(QMainWindow):
         self.recognizer = FaceRecognizer(num_components=num_components)
         self.recognizer.train(self.X_train, self.y_train)
         
-        accuracy = self.recognizer.evaluate(self.X_test, self.y_test)
-        
+        # accuracy = self.recognizer.evaluate(self.X_test, self.y_test)
+        self.update_eval_metrics()
         
         mean_face = self.recognizer.get_mean_face()
         self.mean_display.set_image(mean_face, self.image_shape)
@@ -408,20 +519,21 @@ class FaceRecognitionApp(QMainWindow):
         self.input_display.set_image(test_face, self.image_shape)
         self.input_display.set_title(f"Test Face (True: {self.y_test[idx]})")
         
-        
-        predicted_face, predicted_label = self.recognizer.predict(test_face)
+        threshold = self.threshold_spin.value()
+        predicted_face, predicted_label, confidance = self.recognizer.predict(test_face, threshold=threshold)
         
         
         if predicted_face is not None:
             self.result_display.set_image(predicted_face, self.image_shape)
             self.result_display.set_title(f"Match: {predicted_label}")
-        
+        else:
+            self.result_display.clear()
         
         if self.y_test[idx] == predicted_label:
-            result_text = f"✓ CORRECT: Predicted: {predicted_label}, Actual: {self.y_test[idx]}"
+            result_text = f"✓ CORRECT: Predicted: {predicted_label}, Actual: {self.y_test[idx]}, Confidance: {confidance* 100:.2f} * 100:.2f "
             self.result_label.setStyleSheet(f"color: {SUCCESS}; background: transparent;")
         else:
-            result_text = f"✗ INCORRECT: Predicted: {predicted_label}, Actual: {self.y_test[idx]}"
+            result_text = f"✗ INCORRECT: Predicted: {predicted_label}, Actual: {self.y_test[idx]}, Confidance: {confidance * 100:.2f} "
             self.result_label.setStyleSheet(f"color: {ERROR}; background: transparent;")
         self.result_label.setText(result_text)
 

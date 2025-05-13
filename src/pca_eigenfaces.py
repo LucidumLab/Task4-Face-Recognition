@@ -12,22 +12,15 @@ class PCAEigenfaces:
         """
         X: shape (n_samples, n_features) where each row is a flattened image.
         """
-        # Step 1: Compute mean face
         self.mean_face = np.mean(X, axis=0)
-
-        # Step 2: Center the data
         X_centered = X - self.mean_face
-
-        # Step 3: Compute covariance matrix trick (if needed)
         n_samples, n_features = X_centered.shape
 
         if n_samples < n_features:
-            # Use trick to compute eigenvectors from smaller matrix
             cov_matrix = np.dot(X_centered, X_centered.T)  # shape (n_samples, n_samples)
             eigvals, eigvecs_small = np.linalg.eigh(cov_matrix)
             eigvecs = np.dot(X_centered.T, eigvecs_small)  # project back to high-dim space
         else:
-            # Standard covariance
             cov_matrix = np.cov(X_centered.T)
             eigvals, eigvecs = np.linalg.eigh(cov_matrix)
 
